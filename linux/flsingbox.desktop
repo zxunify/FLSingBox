@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=FLSingBox
+Comment=Multi-platform proxy client powered by sing-box
+Exec=flsingbox
+Icon=flsingbox
+Type=Application
+Categories=Network;Utility;
+Keywords=proxy;vpn;singbox;
+StartupNotify=true
+Terminal=false

@@ -1,0 +1,30 @@
+{
+  "app_version": "0.1.0",
+  "build_number": 1,
+  "core_version": "1.12.0",
+  "release_channel": "stable",
+  "min_core_version": "1.10.0",
+  "platforms": {
+    "android": {
+      "architectures": ["arm64-v8a", "armeabi-v7a"],
+      "min_sdk": 21,
+      "target_sdk": 34
+    },
+    "windows": {
+      "architectures": ["x64"]
+    },
+    "macos": {
+      "architectures": ["arm64", "x86_64"]
+    },
+    "linux": {
+      "architectures": ["x64"]
+    }
+  },
+  "core_download_url_template": "https://github.com/SagerNet/sing-box/releases/download/v{version}/sing-box-{version}-{platform}-{arch}{ext}",
+  "core_binary_name": {
+    "windows": "sing-box.exe",
+    "macos": "sing-box",
+    "linux": "sing-box",
+    "android": "libsingbox.so"
+  }
+}

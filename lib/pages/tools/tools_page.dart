@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/version_service.dart';
 
 class ToolsPage extends ConsumerWidget {
   const ToolsPage({super.key});
@@ -259,21 +260,46 @@ class ToolsPage extends ConsumerWidget {
   }
 
   void _showAbout(BuildContext context) {
-    showAboutDialog(
+    // Use a Consumer to get version info
+    showDialog(
       context: context,
-      applicationName: 'FLSingBox',
-      applicationVersion: '0.1.0',
-      applicationIcon: Icon(
-        Icons.flash_on,
-        size: 48,
-        color: Theme.of(context).colorScheme.primary,
+      builder: (ctx) => Consumer(
+        builder: (context, ref, _) {
+          final versionAsync = ref.watch(appVersionProvider);
+          final version = versionAsync.valueOrNull ?? const AppVersion();
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.flash_on, color: Theme.of(context).colorScheme.primary, size: 32),
+                const SizedBox(width: 12),
+                const Text('FLSingBox'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _AboutRow(label: '应用版本', value: version.displayVersion),
+                _AboutRow(label: 'sing-box 核心', value: version.coreDisplayVersion),
+                _AboutRow(label: '发布渠道', value: version.releaseChannel),
+                const SizedBox(height: 16),
+                const Text('基于 sing-box 的多平台代理客户端'),
+                const SizedBox(height: 8),
+                Text(
+                  '© 2024 FLSingBox',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('确定'),
+              ),
+            ],
+          );
+        },
       ),
-      applicationLegalese: '基于 sing-box 的多平台代理客户端\n© 2024 FLSingBox',
-      children: [
-        const SizedBox(height: 16),
-        const Text('sing-box 核心引擎提供代理支持'),
-        const Text('Flutter 构建跨平台 GUI'),
-      ],
     );
   }
 }
@@ -316,6 +342,27 @@ class _ToolItem extends StatelessWidget {
       title: Text(title),
       subtitle: subtitle != null ? Text(subtitle!) : null,
       onTap: onTap,
+    );
+  }
+}
+
+class _AboutRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _AboutRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text('$label: ', style: Theme.of(context).textTheme.bodySmall),
+          Text(value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+          )),
+        ],
+      ),
     );
   }
 }

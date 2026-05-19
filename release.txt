@@ -1,0 +1,749 @@
+可以。下面这份文档专门聚焦 **“flsingbox 在开发完成后，如何参考 FlClash 做多平台构建、打包、发布”** 的开发需求，适合直接交给别的 AI/开发者实现。
+
+先给结论：
+
+- **FlClash 的发布思路是：Flutter 多平台客户端 + 独立核心 + 按平台构建 + 发布产物分发**
+- 你的 `flsingbox` 也应采用同样路线：
+  - Flutter GUI
+  - sing-box 核心按平台打包
+  - 桌面端输出安装包/压缩包
+  - Android 输出 APK/AAB
+  - GitHub Actions 自动构建发布
+  - Release 资产按平台上传
+  - 支持版本号、核心版本、更新说明、校验值管理
+
+---
+
+# flsingbox 多平台构建、打包、发布需求文档
+**项目名称：flsingbox**  
+**参考对象：`chen08209/FlClash`**  
+**目标：实现 flsingbox 的多平台自动化构建、打包、发布、版本管理与交付体系**
+
+---
+
+# 1. 项目目标
+
+为 `flsingbox` 建立一套完整的发布体系，使项目在功能开发完成后，可以稳定输出以下平台的可安装/可分发版本：
+
+- Android
+- Windows
+- macOS
+- Linux
+
+构建与发布体系应满足：
+
+1. 能自动构建各平台客户端
+2. 能将 `sing-box` 核心按平台正确打包进客户端
+3. 能输出适合最终用户使用的安装包或压缩包
+4. 能自动生成 GitHub Release 发布资产
+5. 能管理应用版本号与核心版本
+6. 能支持后续增量迭代、预发布、稳定版发布
+
+---
+
+# 2. 参考 FlClash 的实现方向
+
+从 FlClash 仓库可确认以下几点：
+
+## 2.1 使用 Flutter 多平台工程
+仓库存在：
+- `android/`
+- `windows/`
+- `linux/`
+- `macos/`
+
+说明其桌面端和移动端都基于 Flutter 工程结构。
+
+## 2.2 有独立构建脚本
+仓库根目录存在：
+
+- `setup.dart`
+
+它不是单纯依赖 Flutter 默认命令，而是有一套额外构建逻辑，用于：
+- 构建核心
+- 整理产物
+- 输出不同平台包
+
+## 2.3 有独立核心构建目录
+仓库存在：
+- `core/`
+- `services/`
+- `plugins/`
+
+说明 FlClash 客户端发布不是只有 Flutter UI，还包括底层核心与辅助服务组件。
+
+## 2.4 README 明确了构建流程
+README 中写明：
+- 先更新 submodules
+- 安装 Flutter、Golang 环境
+- 按平台运行 `setup.dart`
+
+这说明它的发布体系本质上是：
+
+> **Flutter 应用构建 + Go 核心构建 + 平台打包脚本整合**
+
+你的 flsingbox 应该沿用这个思路，只是把 ClashMeta core 替换为 sing-box。
+
+---
+
+# 3. 发布体系总体设计
+
+---
+
+## 3.1 整体发布架构
+
+推荐采用如下分层：
+
+### A. 应用层
+- Flutter 工程
+- 各平台 runner / 插件 / 资源文件
+- 版本号管理
+- 应用图标、名称、权限、签名配置
+
+### B. 核心层
+- sing-box 二进制
+- 按平台、按架构分别构建或下载
+- 在打包时注入到客户端资源目录
+
+### C. 打包层
+- Android APK/AAB
+- Windows 安装包/压缩包
+- macOS App / dmg / zip
+- Linux AppImage / deb / rpm / tar.gz（至少支持一到两种）
+
+### D. 自动化层
+- GitHub Actions 工作流
+- 自动打 tag 后构建
+- 自动上传 Release 资产
+- 自动生成 checksum / changelog
+
+---
+
+## 3.2 推荐发布模式
+
+### 模式 1：手动触发正式发布
+- 开发者打 tag
+- GitHub Actions 自动构建
+- 构建完成自动生成 Release
+
+### 模式 2：PR / push 自动测试构建
+- PR 时执行 lint / test / build check
+- 只验证能构建，不正式发布
+
+### 模式 3：预发布渠道
+- beta / nightly / pre-release
+- 供测试使用
+
+建议：
+- 第一阶段先实现 **正式发布 + PR 验证**
+- 第二阶段再补 nightly / prerelease
+
+---
+
+# 4. 目标平台与交付物要求
+
+---
+
+## 4.1 Android
+### 输出物
+至少输出：
+- `apk`（debug/release）
+- `aab`（用于商店发布，可选但推荐）
+
+### 要求
+- 支持 arm64-v8a
+- 可选支持 armeabi-v7a、x86_64
+- 明确 VPN、前台服务、网络权限等
+- 支持 release 签名
+- 版本号、versionCode 自动递增或可配置
+
+### 推荐产物命名
+- `flsingbox-android-arm64-vX.Y.Z.apk`
+- `flsingbox-android-vX.Y.Z.aab`
+
+---
+
+## 4.2 Windows
+### 输出物
+至少输出其中一种：
+- 绿色版 zip
+- 安装包 exe
+
+推荐同时输出：
+1. 便携版 zip
+2. 安装版 exe
+
+### 要求
+- 支持 x64
+- 可选 arm64
+- 打包 `sing-box.exe`
+- 包含必要的 helper/service（若有）
+- 支持应用图标、版本信息、程序描述
+- 支持静默安装参数（如走安装包方案）
+
+### 推荐产物命名
+- `flsingbox-windows-x64-vX.Y.Z.zip`
+- `flsingbox-windows-x64-installer-vX.Y.Z.exe`
+
+---
+
+## 4.3 macOS
+### 输出物
+推荐输出：
+- `.app` 打包后的 zip
+- `.dmg`（可选，正式体验更好）
+
+### 要求
+- 至少支持 Apple Silicon（arm64）
+- 可选支持 x64
+- 打包 sing-box 对应架构核心
+- 若涉及 TUN / Network Extension，要明确后续签名与权限要求
+- 第一阶段可先支持“开发者本地运行版”
+- 若要面向最终用户，需考虑签名/notarization
+
+### 推荐产物命名
+- `flsingbox-macos-arm64-vX.Y.Z.zip`
+- `flsingbox-macos-universal-vX.Y.Z.dmg`
+
+---
+
+## 4.4 Linux
+### 输出物
+建议至少支持：
+- `tar.gz`
+- `AppImage`
+
+可选支持：
+- `deb`
+- `rpm`
+
+### 要求
+- 至少支持 x64
+- 可选 arm64
+- 带上 sing-box 核心
+- 处理桌面图标、desktop file、启动脚本
+- 声明依赖项
+
+### 推荐产物命名
+- `flsingbox-linux-x64-vX.Y.Z.tar.gz`
+- `flsingbox-linux-x64-vX.Y.Z.AppImage`
+
+---
+
+# 5. 核心打包需求
+
+---
+
+## 5.1 sing-box 核心来源策略
+需要支持两种模式：
+
+### 模式 A：构建时下载官方 sing-box 发行版
+适合：
+- 降低本仓库构建复杂度
+- 快速交付
+
+### 模式 B：自行构建 sing-box
+适合：
+- 需要自定义功能
+- 需要锁定特定 patch 版本
+
+建议第一阶段默认：
+- **优先支持“下载指定版本官方 sing-box 二进制”**
+- 并预留“自定义构建核心”的能力
+
+---
+
+## 5.2 核心版本管理
+必须有统一配置项：
+- `SING_BOX_VERSION`
+- 平台架构映射表
+- 下载 URL 模板
+- SHA256 校验（推荐）
+
+### 要求
+- GUI 能显示当前集成的 core 版本
+- Release 文案中应注明 core 版本
+- 构建脚本能切换 core 版本
+
+---
+
+## 5.3 核心注入方式
+构建时将 sing-box 核心复制到应用运行目录：
+
+### Android
+- 打包到 assets 或 native 运行目录
+- 首次运行释放到 app 内部可执行目录（如需要）
+
+### Windows
+- 和可执行程序同目录
+- 或放入 `data/core/` 等统一目录
+
+### macOS
+- 放入 `.app/Contents/Resources/` 或约定目录
+
+### Linux
+- 放入 AppImage/tar.gz 的应用目录结构内
+
+---
+
+## 5.4 核心权限处理
+对桌面端需要考虑：
+- 可执行权限
+- 文件释放后 chmod
+- 更新后核心替换策略
+- helper/service 权限模型
+
+---
+
+# 6. 构建脚本需求
+
+---
+
+## 6.1 必须提供统一构建入口
+参考 FlClash 的 `setup.dart`，要求 flsingbox 也提供统一脚本，例如：
+
+- `tool/setup.dart`
+- 或根目录 `setup.dart`
+
+支持命令格式示例：
+
+```bash
+dart setup.dart android
+dart setup.dart windows --arch x64
+dart setup.dart macos --arch arm64
+dart setup.dart linux --arch x64
+dart setup.dart release --platform all
+```
+
+---
+
+## 6.2 构建脚本职责
+统一构建脚本负责：
+
+1. 读取版本信息
+2. 下载或构建 sing-box core
+3. 整理平台资源
+4. 调用 Flutter build
+5. 打包输出
+6. 生成 checksum
+7. 移动产物到 `dist/`
+8. 输出 release manifest
+
+---
+
+## 6.3 构建配置文件
+建议新增配置文件，例如：
+
+- `build.yaml`
+- `release.yaml`
+- `tool/config/platforms.dart`
+
+内容包括：
+- app version
+- core version
+- supported platforms
+- arch matrix
+- output naming
+- signing config keys location
+- release channel
+- release notes source
+
+---
+
+# 7. 版本管理需求
+
+---
+
+## 7.1 应用版本号
+需要统一管理：
+- app version，例如 `1.0.0`
+- build number，例如 `100`
+- release channel，例如 `stable` / `beta`
+
+### 要求
+- Flutter 侧版本号一致
+- 各平台构建产物版本一致
+- Release tag 与应用版本一致
+
+---
+
+## 7.2 核心版本号
+应用版本与 sing-box 核心版本必须分离：
+- app version：客户端版本
+- core version：底层 sing-box 版本
+
+### 示例
+- flsingbox `v1.0.0`
+- bundled sing-box `v1.12.3`
+
+### 要求
+在以下位置可见：
+- About 页面
+- 日志页
+- Release Notes
+- 构建元数据
+
+---
+
+## 7.3 版本来源
+建议统一版本来源文件，例如：
+- `pubspec.yaml`
+- `version.json`
+- `tool/version.dart`
+
+---
+
+# 8. GitHub Actions 自动化需求
+
+---
+
+## 8.1 CI 工作流
+至少需要 2 条工作流：
+
+### A. 校验工作流
+触发：
+- push
+- pull_request
+
+执行：
+- flutter analyze
+- flutter test
+- 平台基础构建检查
+- 配置生成测试
+- 打包脚本 dry-run
+
+### B. 发布工作流
+触发：
+- tag push
+- workflow_dispatch
+
+执行：
+- 构建所有目标平台
+- 注入 sing-box core
+- 打包
+- 生成 checksum
+- 创建 GitHub Release
+- 上传资产
+
+---
+
+## 8.2 工作流矩阵
+构建矩阵建议：
+
+- android / ubuntu runner
+- windows / windows runner
+- linux / ubuntu runner
+- macos / macos runner
+
+### 注意
+- macOS 构建必须走 macOS runner
+- Windows 构建必须走 windows runner
+- Android 一般走 ubuntu runner 即可
+
+---
+
+## 8.3 Release 资产上传
+每个平台产物都应上传到同一个 GitHub Release，包括：
+- 安装包
+- 压缩包
+- checksum 文件
+- 可选 changelog/release manifest
+
+---
+
+## 8.4 校验文件
+必须生成：
+- `SHA256SUMS.txt`
+
+可选：
+- `.sig` 签名文件
+
+---
+
+# 9. 发布物目录结构要求
+
+---
+
+## 9.1 构建输出目录
+统一输出到：
+
+```text
+dist/
+  android/
+  windows/
+  macos/
+  linux/
+  checksums/
+```
+
+## 9.2 每个平台内部结构
+示例：
+
+```text
+dist/
+  windows/
+    flsingbox-windows-x64-v1.0.0.zip
+    flsingbox-windows-x64-installer-v1.0.0.exe
+  android/
+    flsingbox-android-arm64-v1.0.0.apk
+    flsingbox-android-v1.0.0.aab
+  macos/
+    flsingbox-macos-arm64-v1.0.0.zip
+  linux/
+    flsingbox-linux-x64-v1.0.0.tar.gz
+    flsingbox-linux-x64-v1.0.0.AppImage
+  checksums/
+    SHA256SUMS.txt
+```
+
+---
+
+# 10. 平台特定需求
+
+---
+
+## 10.1 Android 发布要求
+### 必须实现
+- release keystore 配置
+- `flutter build apk --release`
+- `flutter build appbundle --release`
+- arm64 为主架构
+- 输出渠道签名版
+
+### 可选增强
+- 自动 split-per-abi
+- F-Droid 兼容打包
+- CI secrets 管理签名信息
+
+---
+
+## 10.2 Windows 发布要求
+### 必须实现
+- Flutter Windows Release build
+- 核心文件拷贝
+- 生成 zip 便携版
+- 生成 installer（推荐 Inno Setup / NSIS 其一）
+
+### 可选增强
+- 代码签名
+- 自动创建开始菜单快捷方式
+- 开机启动项写入安装器选项
+
+---
+
+## 10.3 macOS 发布要求
+### 必须实现
+- Flutter macOS release build
+- 核心文件嵌入 app bundle
+- 打包 zip
+
+### 第二阶段可实现
+- dmg 构建
+- codesign
+- notarization
+
+---
+
+## 10.4 Linux 发布要求
+### 必须实现
+- Flutter Linux release build
+- 核心二进制拷贝
+- tar.gz 输出
+
+### 第二阶段可实现
+- AppImage
+- deb 包
+- rpm 包
+
+---
+
+# 11. 应用内更新与版本展示需求
+
+---
+
+## 11.1 About 页面
+必须展示：
+- 应用版本
+- sing-box 核心版本
+- 构建时间（可选）
+- Git commit（可选）
+- 更新链接
+
+## 11.2 更新检查
+第一阶段可只做：
+- 检查 GitHub Release 最新版本
+- 提示用户下载
+
+第二阶段可增强：
+- 自动下载更新包
+- 自动替换核心
+- 桌面端应用自更新
+
+---
+
+# 12. 安全与签名需求
+
+---
+
+## 12.1 Android
+- keystore 不得硬编码到仓库
+- 使用 CI secret 注入
+- 支持本地签名和 CI 签名两种模式
+
+## 12.2 Windows
+- 若无代码签名证书，可先不做
+- 但流程中应预留签名步骤
+
+## 12.3 macOS
+- 若面向最终用户，必须规划 codesign / notarization
+- 第一阶段若未实现，应在文档中明确“未签名版本的安装说明”
+
+## 12.4 校验
+- 所有 release 资产要提供 sha256
+
+---
+
+# 13. 构建失败处理需求
+
+---
+
+## 13.1 失败分类
+构建流程中应明确区分：
+- Flutter 构建失败
+- 核心下载失败
+- 签名失败
+- 打包失败
+- Release 上传失败
+
+## 13.2 日志要求
+CI 日志必须足够清晰，便于快速定位失败步骤。
+
+## 13.3 重试策略
+对网络步骤可支持重试：
+- 下载 sing-box 核心
+- 上传 Release 资产
+
+---
+
+# 14. 实现任务拆解
+
+---
+
+## 阶段 1：基础构建系统
+### 内容
+- 建立统一构建脚本
+- 支持 Android/Windows/macOS/Linux 基础 release build
+- 支持 dist 输出目录
+
+### 验收
+- 四平台都能产出基础包
+
+---
+
+## 阶段 2：sing-box 核心打包
+### 内容
+- 平台核心下载/选择
+- 核心注入应用包
+- 核心版本显示
+
+### 验收
+- 每个平台包里都有正确核心
+- 应用运行时能找到核心
+
+---
+
+## 阶段 3：平台打包优化
+### 内容
+- Android APK/AAB
+- Windows zip + installer
+- macOS zip
+- Linux tar.gz
+- checksum 生成
+
+### 验收
+- 用户可直接下载安装/运行
+
+---
+
+## 阶段 4：CI/CD 自动发布
+### 内容
+- GitHub Actions 校验工作流
+- GitHub Actions release 工作流
+- 自动生成 GitHub Release
+- 自动上传产物
+
+### 验收
+- 打 tag 后自动生成完整 release
+
+---
+
+## 阶段 5：签名与高级发布
+### 内容
+- Android 签名完善
+- Windows/macOS 签名预留
+- 更新检测
+- prerelease/nightly
+
+---
+
+# 15. 交付物要求
+
+实现方必须交付：
+
+1. 统一构建脚本
+2. 平台打包脚本
+3. core 下载/注入逻辑
+4. GitHub Actions 工作流
+5. 版本管理方案
+6. release 资产命名方案
+7. checksum 生成逻辑
+8. 发布说明模板
+9. 平台签名说明文档
+10. 本地构建说明文档
+
+---
+
+# 16. 可以直接发给 AI 的执行说明
+
+你可以把下面这段直接发给别的 AI：
+
+---
+
+## 实现任务说明
+
+请为 `flsingbox` 设计并实现一套参考 `chen08209/FlClash` 的多平台构建、打包、发布系统，要求如下：
+
+1. 项目为 Flutter 多平台客户端，底层集成 sing-box 核心
+2. 目标平台：Android、Windows、macOS、Linux
+3. 参考 FlClash 的思路，提供统一构建脚本（如 setup.dart）
+4. 构建脚本需要负责：
+   - 读取版本信息
+   - 下载或准备 sing-box 核心
+   - 将核心按平台注入客户端
+   - 调用 Flutter 进行 release build
+   - 打包输出到 dist 目录
+   - 生成 checksum
+5. Android 需输出 APK 和 AAB
+6. Windows 需输出 zip 便携版，推荐同时输出 installer
+7. macOS 需输出 zip，后续预留 dmg/codesign/notarization
+8. Linux 需至少输出 tar.gz，后续预留 AppImage/deb
+9. 需要实现 GitHub Actions：
+   - PR/push 构建校验
+   - tag 触发正式发布
+   - 自动创建 GitHub Release
+   - 自动上传所有平台产物
+10. 应用版本与 sing-box 核心版本必须分离管理
+11. About 页面和 Release Notes 中应能显示应用版本和核心版本
+12. 不要把签名证书写死在仓库中，要通过 CI secrets 或本地环境变量处理
+
+输出内容至少包括：
+- 构建架构设计
+- 脚本设计
+- 平台产物方案
+- CI/CD 工作流设计
+- 版本管理方案
+- 目录结构
+- 实施步骤
+
+---
+
