@@ -299,17 +299,10 @@ class WindowsBuilder extends PlatformBuilder {
     final targetDir = path.join(projectRoot, 'windows', 'runner', 'resources');
     Directory(targetDir).createSync(recursive: true);
     File(corePath).copySync(path.join(targetDir, 'sing-box.exe'));
-    // Also copy to assets
+    // Also copy to assets for fallback resolution
     final assetsDir = path.join(projectRoot, 'assets', 'singbox');
     Directory(assetsDir).createSync(recursive: true);
     File(corePath).copySync(path.join(assetsDir, 'sing-box.exe'));
-  }
-
-  @override
-  Future<void> flutterBuild() async {
-    final mode = isRelease ? '--release' : '--debug';
-    final code = await runCmd('flutter', ['build', 'windows', mode]);
-    if (code != 0) throw Exception('Flutter Windows build failed');
   }
 
   @override
@@ -321,9 +314,13 @@ class WindowsBuilder extends PlatformBuilder {
     final buildDir = path.join(projectRoot, 'build', 'windows', arch, 'runner',
         isRelease ? 'Release' : 'Debug');
 
-    // Copy sing-box.exe into the build output
+    // Inject sing-box.exe into build output at data/core/ for CorePathResolver
+    final coreDest = path.join(buildDir, 'data', 'core');
+    Directory(coreDest).createSync(recursive: true);
     final coreSource = path.join(projectRoot, 'assets', 'singbox', 'sing-box.exe');
     if (File(coreSource).existsSync()) {
+      File(coreSource).copySync(path.join(coreDest, 'sing-box.exe'));
+      // Also keep a copy at root level for backward compat
       File(coreSource).copySync(path.join(buildDir, 'sing-box.exe'));
     }
 
@@ -337,6 +334,13 @@ class WindowsBuilder extends PlatformBuilder {
       '-Force',
     ]);
     print('  → $zipPath');
+  }
+
+  @override
+  Future<void> flutterBuild() async {
+    final mode = isRelease ? '--release' : '--debug';
+    final code = await runCmd('flutter', ['build', 'windows', mode]);
+    if (code != 0) throw Exception('Flutter Windows build failed');
   }
 }
 
@@ -382,13 +386,13 @@ class MacOSBuilder extends PlatformBuilder {
       isRelease ? 'Release' : 'Debug', 'flsingbox.app',
     );
 
-    // Inject core into app bundle
-    final resourcesDir = path.join(appPath, 'Contents', 'Resources');
-    Directory(resourcesDir).createSync(recursive: true);
+    // Inject core into app bundle at Contents/Resources/core/
+    final coreDir = path.join(appPath, 'Contents', 'Resources', 'core');
+    Directory(coreDir).createSync(recursive: true);
     final coreSource = path.join(projectRoot, 'assets', 'singbox', 'sing-box');
     if (File(coreSource).existsSync()) {
-      File(coreSource).copySync(path.join(resourcesDir, 'sing-box'));
-      await Process.run('chmod', ['+x', path.join(resourcesDir, 'sing-box')]);
+      File(coreSource).copySync(path.join(coreDir, 'sing-box'));
+      await Process.run('chmod', ['+x', path.join(coreDir, 'sing-box')]);
     }
 
     // Create zip
@@ -439,9 +443,14 @@ class LinuxBuilder extends PlatformBuilder {
     final version = config.appVersion;
     final bundleDir = path.join(projectRoot, 'build', 'linux', arch, 'release', 'bundle');
 
-    // Copy core to bundle
+    // Inject core to bundle at data/core/ for CorePathResolver
+    final coreDest = path.join(bundleDir, 'data', 'core');
+    Directory(coreDest).createSync(recursive: true);
     final coreSource = path.join(projectRoot, 'assets', 'singbox', 'sing-box');
     if (File(coreSource).existsSync()) {
+      File(coreSource).copySync(path.join(coreDest, 'sing-box'));
+      await Process.run('chmod', ['+x', path.join(coreDest, 'sing-box')]);
+      // Also keep at root level for backward compat
       File(coreSource).copySync(path.join(bundleDir, 'sing-box'));
       await Process.run('chmod', ['+x', path.join(bundleDir, 'sing-box')]);
     }
