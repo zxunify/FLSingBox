@@ -7,7 +7,7 @@ import '../models/node/node.dart';
 import 'node_repository.dart';
 import '../services/subscription_sync_service.dart';
 
-const _uuid = Uuid();
+const _uuid = Uuid(); // ignore: unused_element
 
 class SubscriptionRepository {
   final db.AppDatabase _db;

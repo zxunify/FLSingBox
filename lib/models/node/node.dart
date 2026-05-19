@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../protocol_type.dart';
 import '../node_source_type.dart';
 

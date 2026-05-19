@@ -1,5 +1,5 @@
-/// @deprecated 使用 [CoreManager] 代替
-/// 此文件保留向后兼容，新代码应使用 lib/core/manager/core_manager.dart
+// @deprecated 使用 CoreManager 代替
+// 此文件保留向后兼容，新代码应使用 lib/core/manager/core_manager.dart
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../manager/core_manager.dart';

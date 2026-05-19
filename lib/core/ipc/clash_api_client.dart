@@ -10,7 +10,6 @@ final _logger = Logger();
 class ClashApiClient {
   final Dio _dio;
   final String _baseUrl;
-  final String? _secret;
   StreamSubscription? _trafficSub;
   StreamSubscription? _logSub;
 
@@ -19,7 +18,6 @@ class ClashApiClient {
     int port = 9090,
     String? secret,
   })  : _baseUrl = 'http://$host:$port',
-        _secret = secret,
         _dio = Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 3),
           receiveTimeout: const Duration(seconds: 10),

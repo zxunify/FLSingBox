@@ -1,9 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../core/singbox/singbox_controller.dart';
-import '../core/singbox/singbox_config_builder.dart';
 import '../repositories/node_repository.dart';
-import '../repositories/subscription_repository.dart';
 import '../models/group/node_group.dart';
 import '../models/route/route_rule.dart';
 import '../core/database/app_database.dart' as db;
@@ -78,12 +74,12 @@ class RouteRulesNotifier extends StateNotifier<List<RouteRule>> {
 
 // 运行配置构建 Provider
 final runtimeConfigProvider = Provider<Map<String, dynamic>?>((ref) {
-  final nodes = ref.watch(nodeRepositoryProvider);
-  final groups = ref.watch(nodeGroupsProvider);
-  final rules = ref.watch(routeRulesProvider);
-  final mode = ref.watch(proxyModeProvider);
-  final selectedId = ref.watch(selectedNodeIdProvider);
-  return null; // Placeholder - built on demand
+  ref.watch(nodeRepositoryProvider);
+  ref.watch(nodeGroupsProvider);
+  ref.watch(routeRulesProvider);
+  ref.watch(proxyModeProvider);
+  ref.watch(selectedNodeIdProvider);
+  return null; // Placeholder - built on demand via CoreManager
 });
 
 // 连接测速相关

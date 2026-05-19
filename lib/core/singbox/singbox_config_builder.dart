@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../../models/node/node.dart';
 import '../../models/node/protocols/protocol_configs.dart';
 import '../../models/group/node_group.dart';
